@@ -18,8 +18,6 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.lib import colors
 import html
 
-openai.api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-
 
 # 去白底函數
 def remove_white_background(img):
@@ -43,9 +41,9 @@ def resize_with_padding(img, target_size=(500, 500)):
     new_img.paste(img, paste_position)
     return new_img
 
-# ChatGPT 函數
 def ask_chatgpt(prompt):
-    client = openai.Client(api_key=openai.api_key)
+    api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    client = openai.Client(api_key=api_key)
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[{"role": "user", "content": prompt}]
