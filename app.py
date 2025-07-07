@@ -16,6 +16,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib import colors
+import html
 
 openai.api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 
@@ -255,11 +256,11 @@ if uploaded_file is not None:
 
         
         # 組出 HTML 表格
-        html = f"""
+        html_table = f"""
         <style>
         .custom-table-container {{
             width: {chart_width}px;
-            margin-left: O;
+            margin-left: auto;
             margin-right: auto;
         }}
         .custom-table {{
@@ -297,25 +298,26 @@ if uploaded_file is not None:
         
         # 第一層：品牌
         for col in brand_row:
-            html += f"<th>{col}</th>"
-        html += "</tr><tr>"
+            html_table += f"<th>{col}</th>"
+        html_table += "</tr><tr>"
         
         # 第二層：型號
         for col in model_row:
-            html += f"<th>{col}</th>"
-        html += "</tr></thead><tbody>"
+            html_table += f"<th>{col}</th>"
+        html_table += "</tr></thead><tbody>"
         
         # 資料內容
         for row in transposed_data:
-            html += "<tr>"
+            html_table += "<tr>"
             for cell in row:
                 display = "-" if pd.isna(cell) or cell == "" else cell
-                html += f"<td>{display}</td>"
-            html += "</tr>"
+                html_table += f"<td>{display}</td>"
+            html_table += "</tr>"
         
-        html += "</tbody></table></div>"
+        html_table += "</tbody></table></div>"
         
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(html_table, unsafe_allow_html=True)
+
 
 
 
@@ -333,30 +335,41 @@ if uploaded_file is not None and selected_models and (selected_numeric_cols or s
 
     if st.button("請 ChatGPT 總結這次的比較結果"):
         prompt = f"""
-以下為健身器材競品詳細比較資料，請嚴格依據資料客觀整理以下內容，並模擬專業報告的視覺層次，讓標題與內容在字體大小或排版上有清楚區分：
+以下為健身器材競品詳細比較資料，請依據資料客觀整理內容，並模擬專業報告或高端品牌型錄的視覺層次與排版節奏，具體規則如下：
+
+請僅輸出乾淨、結構清晰的 HTML 片段，嚴格遵循以下規範：
 
 【數值型規格分析】
-請逐一針對各項數值規格，提供以下資訊，標題請以加大、加粗格式呈現，內容則正常字級：
+請使用 <table> 表格結構，欄位依序為：
 - 規格名稱
 - 數值範圍（最小值 ~ 最大值）
 - 具有最大值之品牌與型號
 - 具有最小值之品牌與型號
-以上內容請以清楚表格或條列方式呈現，禁止使用 Markdown 或符號，保持純文字。
 
 【文字描述類規格分析】
-針對各產品於文字描述類規格的差異，請逐項條列，規格名稱請加大、加粗，內容正常字級，語句工整，避免冗詞。
+每個規格：
+- 使用 <h2> 作為規格標題
+- 差異描述部分，請使用條列 <ul><li> 或簡短段落 <p> 呈現
 
-【SWOT分析（半商用健身房角度）】
-每款產品請獨立製作「優勢」「劣勢」「機會」「威脅」四個表格，表格結構統一、簡潔，標題加粗顯示，內容正常字級，內容務必具體、避免抽象語言，在這邊的所有表格上下都要寬度對齊。
+【SWOT 分析】
+每個產品請依以下格式呈現：
+<h3>[產品名稱] 產品 SWOT 分析</h3>
+<table>
+<tr><th>面向</th><th>說明</th></tr>
+<tr><td>優勢</td><td>…</td></tr>
+<tr><td>劣勢</td><td>…</td></tr>
+<tr><td>機會</td><td>…</td></tr>
+<tr><td>威脅</td><td>…</td></tr>
+</table>
 
 【競爭力規格設計建議】
-條列具體特徵與設計參數，只給規格和數值，規格重點加粗，內容正常字級。
+請條列具體建議，重要詞彙使用 <b> 加粗，並且若是涉及有參數的規格，給出相關參數的建議。
 
-補充規範：
-- 全程使用繁體中文
-- 僅允許純文字、表格與條列，禁止任何 Markdown、特殊符號或英文半形標點
-- 排版模擬A4專業報告，禁止過寬表格，過長文字請自動換行
-- 請特別注意標題與內容的視覺層次感，模擬專業簡報或報告書中的格式差異
+補充規定：
+- 僅使用 <h1>、<h2>、<h3>、<table>、<tr>、<th>、<td>、<p>、<ul>、<li>、<b>
+- 嚴禁輸出 <html>、<head>、<body>、<!DOCTYPE html> 等外層結構
+- 嚴禁符號轉義，保留標籤原樣
+- 全程繁體中文，內容簡潔利於閱讀
 
 以下為本次重點規格：
 {', '.join(selected_numeric_cols + selected_text_cols)}
@@ -368,14 +381,26 @@ if uploaded_file is not None and selected_models and (selected_numeric_cols or s
         with st.spinner("分析中..."):
             gpt_response = ask_chatgpt(prompt)
         
-        # 暫存結果
         st.session_state["gpt_response"] = gpt_response
 
-    # 若有暫存結果就顯示
+    # 自定義CSS強化視覺效果
+    custom_css = """
+    <style>
+    h1 { font-size: 34px; font-weight: bold; }
+    h2 { font-size: 26px; font-weight: bold; }
+    h3 { font-size: 22px; font-weight: bold; }
+    p  { font-size: 16px; line-height: 1.6; }
+    b  { font-weight: bold; color: #d9534f; }
+    </style>
+    """
+    st.markdown(custom_css, unsafe_allow_html=True)
+    
     if st.session_state["gpt_response"]:
-        st.write(st.session_state["gpt_response"])
-
-
+        clean_text = st.session_state["gpt_response"]
+        if clean_text.startswith("html\n"):
+            clean_text = clean_text[len("html\n"):]
+        st.markdown(clean_text, unsafe_allow_html=True)
+    
     st.write("---")
     st.subheader("💬 ChatGPT 自由提問")
     user_question = st.text_input("請輸入您的問題")
@@ -383,6 +408,7 @@ if uploaded_file is not None and selected_models and (selected_numeric_cols or s
         if user_question.strip():
             with st.spinner("回覆中..."):
                 st.write(ask_chatgpt(user_question))
+
 
 elif uploaded_file is None:
     st.info("請上傳 CSV 檔案以開始。") 
