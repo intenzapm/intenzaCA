@@ -69,15 +69,22 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"❌ 無法讀取檔案：{e}")
         st.stop()
-
+    
+    # === 🛡 標準化欄位名稱 ===
+    df.columns = df.columns.str.strip().str.replace('\u00A0', '').str.replace('\u3000', '')
+    
+    # === 🛠 DEBUG: 印出欄位名稱（測試時用） ===
+    st.write("讀入欄位名稱：", df.columns.tolist())
+    
     # 嘗試將欄位轉為數值（不強制）
     for col in df.columns:
         df[col] = pd.to_numeric(df[col], errors='ignore')
-
+    
     # 如果缺少必要欄位，自動補空欄位
     for col in ["品牌", "產品型號", "圖片網址"]:
         if col not in df.columns:
             df[col] = ""
+
 
 
     with st.expander("📄 原始資料表格（點擊展開/收合）", expanded=False):
