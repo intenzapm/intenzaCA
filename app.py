@@ -73,6 +73,12 @@ if uploaded_file is not None:
     else:
         st.error("❌ 無法讀取 CSV，請確認檔案編碼格式（建議另存為 UTF-8）")
         st.stop()
+        
+    # 強制轉字串
+    if "品牌" in df.columns:
+        df["品牌"] = df["品牌"].astype(str)
+    if "產品型號" in df.columns:
+        df["產品型號"] = df["產品型號"].astype(str)
 
 
     with st.expander("📄 原始資料表格（點擊展開/收合）", expanded=False):
