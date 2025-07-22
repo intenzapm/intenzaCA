@@ -61,7 +61,21 @@ with st.sidebar.expander("📂 請上傳 CSV 檔案", expanded=False):
 
 
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+    # 🛡 強化讀取 CSV 防呆
+    try:
+        df = pd.read_csv(uploaded_file, encoding='utf-8', sep=None, engine='python')
+    except UnicodeDecodeError:
+        df = pd.read_csv(uploaded_file, encoding='big5', sep=None, engine='python')
+    except Exception as e:
+        st.error(f"❌ 無法讀取檔案：{e}")
+        st.stop()
+
+    # 🛡 檢查必要欄位
+    required_cols = ["品牌", "產品型號", "圖片網址"]
+    missing_cols = [col for col in required_cols if col not in df.columns]
+    if missing_cols:
+        st.error(f"❌ 檔案缺少必要欄位：{', '.join(missing_cols)}")
+        st.stop()
 
     with st.expander("📄 原始資料表格（點擊展開/收合）", expanded=False):
         st.dataframe(df, use_container_width=True)
