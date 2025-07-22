@@ -61,30 +61,18 @@ with st.sidebar.expander("📂 請上傳 CSV 檔案", expanded=False):
 
 
 if uploaded_file is not None:
-    # 🛡 輕量防呆
-    try:
-        df = pd.read_csv(uploaded_file, encoding='utf-8', sep=None, engine='python')
-    except UnicodeDecodeError:
-        df = pd.read_csv(uploaded_file, encoding='big5', sep=None, engine='python')
-    except Exception as e:
-        st.error(f"❌ 無法讀取檔案：{e}")
+    # 嘗試讀取 CSV，用多種編碼
+    encodings = ["utf-8", "big5", "cp950", "utf-16", "iso-8859-1"]
+    for enc in encodings:
+        try:
+            df = pd.read_csv(uploaded_file, encoding=enc)
+            st.success(f"✅ 成功使用編碼：{enc}")
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        st.error("❌ 無法讀取 CSV，請確認檔案編碼格式（建議另存為 UTF-8）")
         st.stop()
-    
-    # === 🛡 標準化欄位名稱 ===
-    df.columns = df.columns.str.strip().str.replace('\u00A0', '').str.replace('\u3000', '')
-    
-    # === 🛠 DEBUG: 印出欄位名稱（測試時用） ===
-    st.write("讀入欄位名稱：", df.columns.tolist())
-    
-    # 嘗試將欄位轉為數值（不強制）
-    for col in df.columns:
-        df[col] = pd.to_numeric(df[col], errors='ignore')
-    
-    # 如果缺少必要欄位，自動補空欄位
-    for col in ["品牌", "產品型號", "圖片網址"]:
-        if col not in df.columns:
-            df[col] = ""
-
 
 
     with st.expander("📄 原始資料表格（點擊展開/收合）", expanded=False):
@@ -433,4 +421,4 @@ if uploaded_file is not None and selected_models and (selected_numeric_cols or s
 
 
 elif uploaded_file is None:
-    st.info("請上傳 CSV 檔案以開始。") 
+    st.info("請上傳 CSV 檔案以開始。")  
