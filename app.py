@@ -61,7 +61,7 @@ with st.sidebar.expander("📂 請上傳 CSV 檔案", expanded=False):
 
 
 if uploaded_file is not None:
-    # 🛡 強化讀取 CSV 防呆
+    # 🛡 輕量防呆
     try:
         df = pd.read_csv(uploaded_file, encoding='utf-8', sep=None, engine='python')
     except UnicodeDecodeError:
@@ -70,12 +70,15 @@ if uploaded_file is not None:
         st.error(f"❌ 無法讀取檔案：{e}")
         st.stop()
 
-    # 🛡 檢查必要欄位
-    required_cols = ["品牌", "產品型號", "圖片網址"]
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
-        st.error(f"❌ 檔案缺少必要欄位：{', '.join(missing_cols)}")
-        st.stop()
+    # 嘗試將欄位轉為數值（不強制）
+    for col in df.columns:
+        df[col] = pd.to_numeric(df[col], errors='ignore')
+
+    # 如果缺少必要欄位，自動補空欄位
+    for col in ["品牌", "產品型號", "圖片網址"]:
+        if col not in df.columns:
+            df[col] = ""
+
 
     with st.expander("📄 原始資料表格（點擊展開/收合）", expanded=False):
         st.dataframe(df, use_container_width=True)
