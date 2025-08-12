@@ -17,6 +17,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase import pdfmetrics
 from reportlab.lib import colors
 import html
+from openai import OpenAI, RateLimitError
 
 # 使用 secrets 或環境變數
 api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
@@ -60,11 +61,32 @@ def resize_with_padding(img, target_size=(500, 500)):
 
 # ChatGPT - 單輪分析
 def ask_chatgpt(prompt: str) -> str:
-    response = client.chat.completions.create(
-        model="gpt-4o",  # 模型名稱
-        messages=[{"role": "user", "content": prompt}]
+    backoff = 1.0
+    for _ in range(5):
+        try:
+            r = _client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.2,
+                max_tokens=800
+            )
+            return r.choices[0].message.content
+        except RateLimitError as e:
+            wait = None
+            try:
+                wait = float(getattr(e, "response", None).headers.get("retry-after"))
+            except Exception:
+                pass
+            time.sleep(wait if wait else backoff)
+            backoff = min(backoff * 2, 20.0)
+    # 五次皆失敗：最後再嘗試一次以較小模型
+    r = _client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=600
     )
-    return response.choices[0].message.content
+    return r.choices[0].message.content
 
 
 # 多行文字換行工具
