@@ -64,13 +64,14 @@ def ask_chatgpt(prompt: str) -> str:
     backoff = 1.0
     for _ in range(5):
         try:
-            r = _client.chat.completions.create(
+            r = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.2,
                 max_tokens=800
             )
             return r.choices[0].message.content
+
         except RateLimitError as e:
             wait = None
             try:
@@ -79,14 +80,16 @@ def ask_chatgpt(prompt: str) -> str:
                 pass
             time.sleep(wait if wait else backoff)
             backoff = min(backoff * 2, 20.0)
-    # 五次皆失敗：最後再嘗試一次以較小模型
-    r = _client.chat.completions.create(
+
+    # 最後一次用較小模型嘗試
+    r = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         max_tokens=600
     )
     return r.choices[0].message.content
+
 
 
 # 多行文字換行工具
