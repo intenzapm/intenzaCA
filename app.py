@@ -59,13 +59,12 @@ def resize_with_padding(img, target_size=(500, 500)):
     return new_img
 
 # ChatGPT - 單輪分析
-def ask_chatgpt(prompt):
-    openai.api_key = api_key
-    response = openai.ChatCompletion.create(
-        model="gpt-4o",
+def ask_chatgpt(prompt: str) -> str:
+    response = client.chat.completions.create(
+        model="gpt-4o",  # 模型名稱
         messages=[{"role": "user", "content": prompt}]
     )
-    return response.choices[0].message["content"]
+    return response.choices[0].message.content
 
 
 # 多行文字換行工具
